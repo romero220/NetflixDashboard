@@ -23,7 +23,7 @@ def load_data():
 df = load_data()
 
 # Sidebar filters
-st.sidebar.title("\ud83c\udfa5 Netflix Dashboard")
+st.sidebar.title("🎥 Netflix Dashboard")
 st.sidebar.markdown("Explore Netflix movies and TV shows!")
 
 # Select filters
