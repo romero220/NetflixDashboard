@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # Page configuration
 st.set_page_config(
     page_title="Netflix Dashboard",
-    page_icon="\ud83c\udfa5",
+    page_icon="🎥",
     layout="wide",
     initial_sidebar_state="expanded",
 )
