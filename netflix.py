@@ -114,35 +114,6 @@ type_counts = filtered_data["type"].value_counts()
 donut_chart = px.pie(type_counts, values=type_counts.values, names=type_counts.index, hole=0.5, title="Type Distribution")
 st.plotly_chart(donut_chart)
 
-# Visualization 7: Choropleth Map
-st.write("### Choropleth Map: Number of Movies/TV Shows by Country")
-if "country" in df.columns:
-    # Preprocess the data
-    country_data = (
-        df_exploded_country["country"]
-        .value_counts()
-        .reset_index()
-        .rename(columns={"index": "country", "country": "count"})  # Ensure unique column names
-    )
-
-    # Check for duplicate column names (debugging step, optional)
-    if len(country_data.columns) != len(set(country_data.columns)):
-        st.error("Duplicate column names found in country_data. Please check your DataFrame.")
-
-    # Create the choropleth map
-    choropleth_map = px.choropleth(
-        country_data,
-        locations="country",
-        locationmode="country names",  # Match with country names
-        color="count",
-        color_continuous_scale="Viridis",
-        title="Number of Movies/TV Shows by Country",
-        labels={"count": "Number of Titles"},
-    )
-
-    # Display the map
-    st.plotly_chart(choropleth_map)
-
 
 # Save cleaned data
 if st.sidebar.button("Save Cleaned Data"):
