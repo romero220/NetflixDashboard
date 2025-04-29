@@ -59,6 +59,12 @@ top_directors = filtered_data["director"].value_counts().head(10)
 top_directors_chart = px.bar(top_directors, x=top_directors.index, y=top_directors.values, title="Top 10 Directors")
 st.plotly_chart(top_directors_chart)
 
+#Visualization 3: Ratings
+st.write("### Rating Distribution")
+rating_counts = filtered_data["rating"].value_counts()
+rating_chart = px.bar(rating_counts, x=rating_counts.index, y=rating_counts.values, title="Rating Distribution")
+st.plotly_chart(rating_chart)
+
 # Visualization 3: Genre Distribution
 st.write("### Genre Distribution")
 df_exploded_genre = filtered_data.assign(listed_in=filtered_data["listed_in"].str.split(",")).explode("listed_in")
