@@ -59,7 +59,9 @@ st.write("### Release Year Distribution")
 release_year_chart = alt.Chart(filtered_data).mark_bar().encode(
     x=alt.X("release_year:O", title="Release Year"),
     y=alt.Y("count():Q", title="Count"),
-    color="type:N",
+    color=alt.Color(
+        "type:N",
+        scale=alt.Scale(range=["#E50914", "#B20710"]),  # Netflix red shades
     tooltip=["release_year", "count()"]
 ).properties(width=700, height=400)
 st.altair_chart(release_year_chart)
@@ -67,13 +69,13 @@ st.altair_chart(release_year_chart)
 # Visualization 2: Top Directors
 st.write("### Top 10 Directors")
 top_directors = filtered_data["director"].value_counts().head(10)
-top_directors_chart = px.bar(top_directors, x=top_directors.index, y=top_directors.values, title="Top 10 Directors")
+top_directors_chart = px.bar(top_directors, x=top_directors.index, y=top_directors.values, title="Top 10 Directors", color_discrete_sequence=["#E50914"]  # Netflix red)
 st.plotly_chart(top_directors_chart)
 
 #Visualization 3: Ratings
 st.write("### Rating Distribution")
 rating_counts = filtered_data["rating"].value_counts()
-rating_chart = px.bar(rating_counts, x=rating_counts.index, y=rating_counts.values, title="Rating Distribution")
+rating_chart = px.bar(rating_counts, x=rating_counts.index, y=rating_counts.values, title="Rating Distribution", color_discrete_sequence=["#E50914"]  # Netflix red)
 st.plotly_chart(rating_chart)
 
 # Visualization 3: Genre Distribution
@@ -81,7 +83,7 @@ st.write("### Genre Distribution")
 df_exploded_genre = filtered_data.assign(listed_in=filtered_data["listed_in"].str.split(",")).explode("listed_in")
 df_exploded_genre["listed_in"] = df_exploded_genre["listed_in"].str.strip()
 genre_counts = df_exploded_genre["listed_in"].value_counts().head(10)
-genre_chart = px.bar(genre_counts, x=genre_counts.index, y=genre_counts.values, title="Top Genres")
+genre_chart = px.bar(genre_counts, x=genre_counts.index, y=genre_counts.values, title="Top Genres", color_discrete_sequence=["#E50914"]  # Netflix red)
 st.plotly_chart(genre_chart)
 
 # Visualization 4: Country Distribution
@@ -95,7 +97,7 @@ df_exploded_country["country"] = df_exploded_country["country"].str.strip()
 country_counts = df_exploded_country["country"].value_counts().head(10)
 
 # Create a bar chart for the top 10 countries
-country_chart = px.bar(country_counts, x=country_counts.index, y=country_counts.values, title="Top Countries")
+country_chart = px.bar(country_counts, x=country_counts.index, y=country_counts.values, title="Top Countries", color_discrete_sequence=["#E50914"]  # Netflix red)
 st.plotly_chart(country_chart)
 
 # Prepare data for the choropleth map
@@ -108,7 +110,7 @@ choropleth_map = px.choropleth(
     locations="country",
     locationmode="country names",  # Match with country names
     color="count",
-    color_continuous_scale="Viridis",
+   color_continuous_scale=["#FFCCCC", "#E50914"],  # Gradient to Netflix red,
     title="Number of Movies/TV Shows by Country",
     labels={"count": "Number of Titles"},
 )
