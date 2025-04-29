@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # Load Netflix data
-@st.cache
+@st.cache_data
 def load_data():
     df = pd.read_csv("netflix_titles.csv")
     return df
