@@ -61,7 +61,8 @@ release_year_chart = alt.Chart(filtered_data).mark_bar().encode(
     y=alt.Y("count():Q", title="Count"),
     color=alt.Color(
         "type:N",
-        scale=alt.Scale(range=["#E50914", "#B20710"]),  # Netflix red shades
+        scale=alt.Scale(range=["#E50914", "#B20710"])  # Netflix red shades
+    ),
     tooltip=["release_year", "count()"]
 ).properties(width=700, height=400)
 st.altair_chart(release_year_chart)
