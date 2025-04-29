@@ -22,6 +22,17 @@ def load_data():
 
 df = load_data()
 
+#Fix Data Spills
+# Find rows where 'duration' is null and 'rating' is not null
+null_duration_not_null_rating = df[(df['duration'].isnull()) & (df['rating'].notnull())]
+
+# Fill null 'duration' values with corresponding 'rating' values
+df.loc[null_duration_not_null_rating.index, 'duration'] = null_duration_not_null_rating['rating']
+
+# Set the 'rating' values in those same rows to null
+df.loc[null_duration_not_null_rating.index, 'rating'] = np.nan
+
+
 # Sidebar filters
 st.sidebar.title("🎥 Netflix Dashboard")
 st.sidebar.markdown("Explore Netflix movies and TV shows!")
