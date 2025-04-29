@@ -129,13 +129,14 @@ st.write("### Heatmap of Release Years vs. Ratings")
 if "rating" in df.columns:
     heatmap_data = filtered_data.pivot_table(index="release_year", columns="rating", aggfunc="size", fill_value=0)
     fig, ax = plt.subplots(figsize=(10, 6))
-    sns.heatmap(heatmap_data, cmap="Blues", annot=True, fmt="d", cbar=True, ax=ax)
+    sns.heatmap(heatmap_data, cmap="Reds", annot=True, fmt="d", cbar=True, ax=ax)
     st.pyplot(fig)
 
 # Visualization 6: Donut Chart (Type Distribution)
 st.write("### Distribution by Type")
 type_counts = filtered_data["type"].value_counts()
-donut_chart = px.pie(type_counts, values=type_counts.values, names=type_counts.index, hole=0.5, title="Type Distribution")
+donut_chart = px.pie(type_counts, values=type_counts.values, names=type_counts.index, hole=0.5, title="Type Distribution", color_discrete_sequence=["#E50914", "#B20710"]  # Netflix red shades
+                    )
 st.plotly_chart(donut_chart)
 
 
