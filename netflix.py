@@ -35,7 +35,7 @@ df.loc[null_duration_not_null_rating.index, 'rating'] = np.nan
 
 # Sidebar filters
 st.sidebar.image("NetflixLogo.png", use_column_width=True)
-st.sidebar.title("🎥 Netflix Dashboard")
+st.sidebar.title("Netflix Dashboard")
 st.sidebar.markdown("Netflix Dashboard")
 
 # Select filters
