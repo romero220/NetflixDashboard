@@ -35,7 +35,7 @@ df.loc[null_duration_not_null_rating.index, 'rating'] = np.nan
 
 # Sidebar filters
 st.sidebar.title("🎥 Netflix Dashboard")
-st.sidebar.markdown("Explore Netflix movies and TV shows!")
+st.sidebar.markdown("Netflix Dashboard")
 
 # Select filters
 selected_type = st.sidebar.selectbox("Select Type", options=["All"] + list(df["type"].unique()))
@@ -140,7 +140,13 @@ donut_chart = px.pie(type_counts, values=type_counts.values, names=type_counts.i
 st.plotly_chart(donut_chart)
 
 
-# Save cleaned data
-if st.sidebar.button("Save Cleaned Data"):
-    filtered_data.to_csv("netflix_titles_cleaned.csv", index=False)
-    st.sidebar.success("Cleaned data saved!")
+# Add a download button to download filtered data as CSV
+csv = filtered_data.to_csv(index=False)
+
+st.sidebar.download_button(
+    label="Download Cleaned Data",
+    data=csv,
+    file_name="netflix_titles_cleaned.csv",
+    mime="text/csv",
+)
+
