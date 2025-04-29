@@ -97,8 +97,12 @@ if "country" in df.columns:
         df_exploded_country["country"]
         .value_counts()
         .reset_index()
-        .rename(columns={"index": "country", "country": "count"})
+        .rename(columns={"index": "country", "country": "count"})  # Ensure unique column names
     )
+
+    # Check for duplicate column names (debugging step, optional)
+    if len(country_data.columns) != len(set(country_data.columns)):
+        st.error("Duplicate column names found in country_data. Please check your DataFrame.")
 
     # Create the choropleth map
     choropleth_map = px.choropleth(
@@ -113,6 +117,7 @@ if "country" in df.columns:
 
     # Display the map
     st.plotly_chart(choropleth_map)
+
 
 # Save cleaned data
 if st.sidebar.button("Save Cleaned Data"):
