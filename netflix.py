@@ -69,11 +69,36 @@ st.plotly_chart(genre_chart)
 
 # Visualization 4: Country Distribution
 st.write("### Country Distribution")
+
+# Exploding the 'country' column into individual rows
 df_exploded_country = filtered_data.assign(country=filtered_data["country"].str.split(",")).explode("country")
 df_exploded_country["country"] = df_exploded_country["country"].str.strip()
+
+# Count the occurrences of each country
 country_counts = df_exploded_country["country"].value_counts().head(10)
+
+# Create a bar chart for the top 10 countries
 country_chart = px.bar(country_counts, x=country_counts.index, y=country_counts.values, title="Top Countries")
 st.plotly_chart(country_chart)
+
+# Prepare data for the choropleth map
+country_counts_map = df_exploded_country["country"].value_counts().reset_index()
+country_counts_map.columns = ["country", "count"]
+
+# Create the choropleth map
+choropleth_map = px.choropleth(
+    country_counts_map,
+    locations="country",
+    locationmode="country names",  # Match with country names
+    color="count",
+    color_continuous_scale="Viridis",
+    title="Number of Movies/TV Shows by Country",
+    labels={"count": "Number of Titles"},
+)
+
+# Display the map
+st.plotly_chart(choropleth_map)
+
 
 # Visualization 5: Heatmap
 st.write("### Heatmap of Release Years vs. Ratings")
