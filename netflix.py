@@ -144,9 +144,9 @@ st.plotly_chart(donut_chart)
 csv = filtered_data.to_csv(index=False)
 
 st.sidebar.download_button(
-    label="Download Cleaned Data",
+    label="Download Filtered Data",
     data=csv,
-    file_name="netflix_titles_cleaned.csv",
+    file_name="netflix_titles_filtered.csv",
     mime="text/csv",
 )
 
