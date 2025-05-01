@@ -6,7 +6,7 @@ import plotly.express as px
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Page configuration
+
 st.set_page_config(
     page_title="Netflix Dashboard",
     page_icon="🎥",
@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Load Netflix data
+
 @st.cache_data
 def load_data():
     df = pd.read_csv("netflix_titles.csv")
@@ -141,7 +141,7 @@ donut_chart = px.pie(type_counts, values=type_counts.values, names=type_counts.i
 st.plotly_chart(donut_chart)
 
 
-# Add a download button to download filtered data as CSV
+#download button to download filtered data as CSV
 csv = filtered_data.to_csv(index=False)
 
 st.sidebar.download_button(
