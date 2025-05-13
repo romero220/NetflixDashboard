@@ -1,153 +1,200 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import altair as alt
-import plotly.express as px
-import seaborn as sns
+from collections import Counter
 import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+import warnings
+import string
+import re
+import nltk
+from nltk.stem import WordNetLemmatizer
+
+# Ensure NLTK resources are downloaded
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+warnings.filterwarnings("ignore", message="Converting to PeriodArray/Index representation will drop timezone information")
+
+# Streamlit page configuration
+st.set_page_config(page_title="Task Dashboard", layout="wide")
+
+# Define color palette
+color_palette = sns.color_palette("autumn", as_cmap=True)
 
 
-st.set_page_config(
-    page_title="Netflix Dashboard",
-    page_icon="🎥",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 
+# Load data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("netflix_titles.csv")
-    return df
+    # Replace this with actual data loading logic
+    csv_files = [file for file in os.listdir('.') if file.endswith('.csv')]
 
-df = load_data()
+    # Check if any CSV files are found
+    if not csv_files:
+        print("No CSV files found in the repository.")
+        return pd.DataFrame()  # Return an empty DataFrame if no files are found
 
-#Fix Data Spills
-# Find rows where 'duration' is null and 'rating' is not null
-null_duration_not_null_rating = df[(df['duration'].isnull()) & (df['rating'].notnull())]
+    dataframes = []
+    for filename in csv_files:
+        df = pd.read_csv(filename)
+        numeric_id = filename.split('-')[2] if '-' in filename else 'Unknown'
+        df['ProjectID'] = numeric_id
+        dataframes.append(df)
 
-# Fill null 'duration' values with corresponding 'rating' values
-df.loc[null_duration_not_null_rating.index, 'duration'] = null_duration_not_null_rating['rating']
+    combined_df = pd.concat(dataframes, ignore_index=True)
 
-# Set the 'rating' values in those same rows to null
-df.loc[null_duration_not_null_rating.index, 'rating'] = np.nan
+    combined_df['ProjectID-ID'] = combined_df['ProjectID'].astype(str) + " " + combined_df['id'].astype(str)
+    combined_df['Full_Name'] = combined_df['user_first_name'].astype(str) + " " + combined_df['user_last_name'].astype(str)
+    combined_df['week'] = pd.to_datetime(combined_df['started_at'], errors="coerce").dt.isocalendar().week
+    combined_df['month'] = pd.to_datetime(combined_df['started_at'], errors="coerce").dt.month
+    combined_df['year'] = pd.to_datetime(combined_df['started_at'], errors="coerce").dt.year
 
+    # Additional preprocessing logic
+    combined_df['ProjectID-ID'] = combined_df['ProjectID'].astype(str) + " " + combined_df['id'].astype(str)
+    combined_df['task_wo_punct'] = combined_df['task'].apply(lambda x: ''.join([char for char in str(x) if char not in string.punctuation]))
+    combined_df['task_wo_punct_split'] = combined_df['task_wo_punct'].apply(lambda x: re.split(r'\W+', str(x).lower()))
+
+    stopword = nltk.corpus.stopwords.words('english')
+    combined_df['task_wo_punct_split_wo_stopwords'] = combined_df['task_wo_punct_split'].apply(
+        lambda x: [word for word in x if word not in stopword]
+    )
+
+    lemmatizer = WordNetLemmatizer()
+    combined_df['task_wo_punct_split_wo_stopwords_lemmatized'] = combined_df['task_wo_punct_split_wo_stopwords'].apply(
+        lambda x: [lemmatizer.lemmatize(word) for word in x]
+    )
+
+    combined_df["Hours"] = combined_df["minutes"] / 60
+    combined_df["week"] = pd.to_datetime(combined_df["started_at"], errors="coerce").dt.isocalendar().week
+    combined_df["month"] = pd.to_datetime(combined_df["started_at"], errors="coerce").dt.month
+    combined_df["year_month"] = pd.to_datetime(combined_df["started_at"], errors="coerce").dt.to_period("M")
+
+    categories = {
+            "technology": ["website", "sql", "backend", "repository", "ai", "coding", "file", "database", "application", "program", "flask", "html", "css", "javascript"],
+            "actions": ["reviewed", "created", "tested", "fixed", "debugged", "implemented", "researched", "planned", "updated", "designed", "documented", "analyzed", "optimized", "added", "removed"],
+            "design": ["logo", "design", "styling", "layout", "responsive", "theme", "navbar", "icon", "image", "photo", "redesigning", "wireframes"],
+            "writing": ["blog", "guide", "documentation", "report", "note", "summary", "draft", "content", "copywriting"],
+            "meetings": ["meeting", "call", "discussion", "session", "presentation", "team"],
+            "business": ["grant", "funding", "startup", "loan", "entrepreneur", "business", "government"],
+            "errors": ["bug", "error", "issue", "fixing", "debugging", "problem", "mistake"],
+            "time": ["hour", "day", "week", "month", "year"],
+            "miscellaneous": []  # For words that don't fit into other categories
+        }
+    
+    def categorize_words(task_wo_punct_split_wo_stopwords_lemmatized, categories):
+            categorized = {category: [] for category in categories.keys()}
+            uncategorized = []  # To track words that don't match any category
+
+            for word in task_wo_punct_split_wo_stopwords_lemmatized:
+                found = False
+                for category, keywords in categories.items():
+                    if word in keywords:
+                        categorized[category].append(word)
+                        found = True
+                        break
+                if not found:
+                    uncategorized.append(word)  # Add to uncategorized if no match
+
+            categorized["miscellaneous"] = uncategorized  # Add uncategorized words to "miscellaneous"
+            return categorized
+
+    combined_df['Categorized'] = combined_df['task_wo_punct_split_wo_stopwords_lemmatized'].apply(lambda x: categorize_words(x, categories))
+
+    return combined_df
+
+# Load the data
+combined_df = load_data()
 
 # Sidebar filters
-st.sidebar.image("NetflixLogo.png", use_column_width=True)
-st.sidebar.title("Netflix Dashboard")
-st.sidebar.markdown("Netflix Dashboard")
-
-# Select filters
-selected_type = st.sidebar.selectbox("Select Type", options=["All"] + list(df["type"].unique()))
-selected_country = st.sidebar.selectbox("Select Country", options=["All"] + list(df["country"].dropna().unique()))
-selected_year = st.sidebar.slider("Select Release Year", int(df["release_year"].min()), int(df["release_year"].max()), (2015, 2020))
+st.sidebar.header("Filters")
+categories = st.sidebar.multiselect("Select Categories", options=combined_df['Categorized'].explode().unique())
+date_filter = st.sidebar.date_input("Filter by Date", [])
+search_term = st.sidebar.text_input("Search Task", "")
+full_name_filter = st.sidebar.multiselect("Filter by Full Name", options=combined_df['Full_Name'].unique())
 
 # Filter data
-filtered_data = df.copy()
-if selected_type != "All":
-    filtered_data = filtered_data[filtered_data["type"] == selected_type]
-if selected_country != "All":
-    filtered_data = filtered_data[filtered_data["country"] == selected_country]
-filtered_data = filtered_data[(filtered_data["release_year"] >= selected_year[0]) & (filtered_data["release_year"] <= selected_year[1])]
+filtered_data = combined_df.copy()
+if categories:
+    filtered_data = filtered_data[filtered_data['task_wo_punct_split_wo_stopwords_lemmatized'].apply(
+        lambda x: any(word in categories for word in x)
+    )]
+if len(date_filter) == 2:
+    filtered_data["started_at"] = pd.to_datetime(filtered_data["started_at"], errors="coerce").dt.tz_localize(None)
+    start_date = pd.to_datetime(date_filter[0])
+    end_date = pd.to_datetime(date_filter[1])
+    filtered_data = filtered_data[
+        (filtered_data["started_at"] >= start_date) &
+        (filtered_data["started_at"] <= end_date)
+    ]
+if search_term:
+    filtered_data = filtered_data[filtered_data['task'].str.contains(search_term, case=False, na=False)]
+if full_name_filter:
+    filtered_data = filtered_data[filtered_data['Full_Name'].isin(full_name_filter)]
 
-# Display filtered data
-st.write("### Filtered Netflix Data")
-st.write(filtered_data)
+# Tabs for graphs
+tab1, tab2, tab3 = st.tabs(["Overview", "Hours", "Entries"])
 
-# Visualization 1: Release Year Distribution
-st.write("### Release Year Distribution")
-release_year_chart = alt.Chart(filtered_data).mark_bar().encode(
-    x=alt.X("release_year:O", title="Release Year"),
-    y=alt.Y("count():Q", title="Count"),
-    color=alt.Color(
-        "type:N",
-        scale=alt.Scale(range=["#E50914", "#B20710"])  # Netflix red shades
-    ),
-    tooltip=["release_year", "count()"]
-).properties(width=700, height=400)
-st.altair_chart(release_year_chart)
-
-# Visualization 2: Top Directors
-st.write("### Top 10 Directors")
-top_directors = filtered_data["director"].value_counts().head(10)
-top_directors_chart = px.bar(top_directors, x=top_directors.index, y=top_directors.values, title="Top 10 Directors", color_discrete_sequence=["#E50914"]  # Netflix red
-                            )
-st.plotly_chart(top_directors_chart)
-
-#Visualization 3: Ratings
-st.write("### Rating Distribution")
-rating_counts = filtered_data["rating"].value_counts()
-rating_chart = px.bar(rating_counts, x=rating_counts.index, y=rating_counts.values, title="Rating Distribution", color_discrete_sequence=["#E50914"]  # Netflix red
-                     )
-st.plotly_chart(rating_chart)
-
-# Visualization 3: Genre Distribution
-st.write("### Genre Distribution")
-df_exploded_genre = filtered_data.assign(listed_in=filtered_data["listed_in"].str.split(",")).explode("listed_in")
-df_exploded_genre["listed_in"] = df_exploded_genre["listed_in"].str.strip()
-genre_counts = df_exploded_genre["listed_in"].value_counts().head(10)
-genre_chart = px.bar(genre_counts, x=genre_counts.index, y=genre_counts.values, title="Top Genres", color_discrete_sequence=["#E50914"]  # Netflix red
-                    )
-st.plotly_chart(genre_chart)
-
-# Visualization 4: Country Distribution
-st.write("### Country Distribution")
-
-# Exploding the 'country' column into individual rows
-df_exploded_country = filtered_data.assign(country=filtered_data["country"].str.split(",")).explode("country")
-df_exploded_country["country"] = df_exploded_country["country"].str.strip()
-
-# Count the occurrences of each country
-country_counts = df_exploded_country["country"].value_counts().head(10)
-
-# Create a bar chart for the top 10 countries
-country_chart = px.bar(country_counts, x=country_counts.index, y=country_counts.values, title="Top Countries", color_discrete_sequence=["#E50914"]  # Netflix red
-                      )
-st.plotly_chart(country_chart)
-
-# Prepare data for the choropleth map
-country_counts_map = df_exploded_country["country"].value_counts().reset_index()
-country_counts_map.columns = ["country", "count"]
-
-# Create the choropleth map
-choropleth_map = px.choropleth(
-    country_counts_map,
-    locations="country",
-    locationmode="country names",  # Match with country names
-    color="count",
-   color_continuous_scale=["#FFCCCC", "#E50914"],  # Gradient to Netflix red,
-    title="Number of Movies/TV Shows by Country",
-    labels={"count": "Number of Titles"},
-)
-
-# Display the map
-st.plotly_chart(choropleth_map)
+# Tab 1: Overview
+# Tab 1: Overview
+with tab1:
+    st.header("Top 20 Most Common Words")
+    all_words = [word for sublist in filtered_data['task_wo_punct_split_wo_stopwords_lemmatized'] for word in sublist]
+    word_counts = Counter(all_words).most_common(20)
+    
+    if word_counts:
+        words, counts = zip(*word_counts)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.barplot(x=list(words), y=list(counts), palette="autumn", ax=ax)
+        ax.set_title("Top 20 Most Common Words (Lemmatized)", fontsize=14)
+        ax.set_xlabel("Words", fontsize=12)
+        ax.set_ylabel("Count", fontsize=12)
+        ax.tick_params(axis='x', rotation=45)
+        st.pyplot(fig)
+    else:
+        st.info("No data available for the selected filters to display word frequency.")
 
 
-# Visualization 5: Heatmap
-st.write("### Heatmap of Release Years vs. Ratings")
-if "rating" in df.columns:
-    heatmap_data = filtered_data.pivot_table(index="release_year", columns="rating", aggfunc="size", fill_value=0)
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.heatmap(heatmap_data, cmap="Reds", annot=True, fmt="d", cbar=True, ax=ax)
+# Tab 2: Hours by Time Period
+with tab2:
+    st.header("Hours by Time Period")
+    time_option = st.selectbox("Select Time Period", options=["Week", "Month", "Year"], index=2)
+    
+    if time_option == "Week":
+        time_col = "week"
+    elif time_option == "Month":
+        time_col = "month"
+    else:
+        time_col = "year"
+
+    grouped_data = filtered_data.groupby([time_col, 'Full_Name'])['Hours'].sum().reset_index()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.barplot(data=grouped_data, x=time_col, y="Hours", hue="Full_Name", palette="autumn", ax=ax, dodge=False)
+    ax.set_title(f"Hours by {time_option}", fontsize=14)
+    ax.set_xlabel(time_option, fontsize=12)
+    ax.set_ylabel("Hours", fontsize=12)
+    ax.tick_params(axis='x', rotation=45)
     st.pyplot(fig)
 
-# Visualization 6: Donut Chart (Type Distribution)
-st.write("### Distribution by Type")
-type_counts = filtered_data["type"].value_counts()
-donut_chart = px.pie(type_counts, values=type_counts.values, names=type_counts.index, hole=0.5, title="Type Distribution", color_discrete_sequence=["#E50914", "#B20710"]  # Netflix red shades
-                    )
-st.plotly_chart(donut_chart)
+# Tab 3: Entries Count
+with tab3:
+    st.header("Entries Count by Time Period")
+    counts_time_option = st.selectbox("Select Time Period", options=["Week", "Month", "Year"], index=1)
+    
+    if counts_time_option == "Week":
+        count_col = "week"
+    elif counts_time_option == "Month":
+        count_col = "year_month"
+    else:
+        count_col = "year"
 
-
-#download button to download filtered data as CSV
-csv = filtered_data.to_csv(index=False)
-
-st.sidebar.download_button(
-    label="Download Filtered Data",
-    data=csv,
-    file_name="netflix_titles_filtered.csv",
-    mime="text/csv",
-)
-
+    counts = filtered_data.groupby(count_col)['ProjectID-ID'].nunique()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    counts.plot(kind='bar', color='#FE6E00', edgecolor='black', ax=ax)
+    ax.set_title(f"Unique Entries by {counts_time_option}", fontsize=14)
+    ax.set_xlabel(counts_time_option, fontsize=12)
+    ax.set_ylabel("Unique Entries", fontsize=12)
+    ax.tick_params(axis='x', rotation=45)
+    st.pyplot(fig)
